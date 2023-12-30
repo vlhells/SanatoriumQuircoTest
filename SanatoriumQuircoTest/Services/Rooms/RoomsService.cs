@@ -74,12 +74,6 @@ namespace SanatoriumQuircoTest.Services.Rooms
 
         public async Task<string> JoinUserIntoRoom(string accessToken, string roomIdOrAlias, string serverName)
         {
-            var requestParameters = new
-            {
-                roomIdOrAlias = roomIdOrAlias,
-                server_name = serverName
-            };
-
             using (HttpClient client = new HttpClient())
             {
                 var targetUrl = _apiUrl + _joinEndpoint;

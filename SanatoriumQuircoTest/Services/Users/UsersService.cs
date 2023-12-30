@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System.Net;
 using System.Text;
 
 namespace SanatoriumQuircoTest.Services.Users

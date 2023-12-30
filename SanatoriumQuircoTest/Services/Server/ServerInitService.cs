@@ -78,9 +78,16 @@ namespace SanatoriumQuircoTest.Services
 
                 for (int i = 0; i < 2; i++)
                 {
-                    int empNum = r.Next(0, empsTokensAndIds.Count() - 1);
+                    int empNum;
+                    int prevEmpNum = -1; // For init this variable.
+                    do
+                    {
+                        empNum = r.Next(0, empsTokensAndIds.Count() - 1);
+                    } while (empNum == prevEmpNum);
                     var resultOfEmpInvite = await _roomsService.InviteUserIntoRoom(sanatoriumAccessToken, roomId, empsTokensAndIds[empNum].id);
                     var resultOfEmpJoin = await _roomsService.JoinUserIntoRoom(empsTokensAndIds[empNum].accToken, roomId, _apiUrl);
+
+                    prevEmpNum = empNum;
 
                     CheckResult(resultOfEmpInvite);
                     CheckResult(resultOfEmpJoin);
