@@ -11,13 +11,14 @@ namespace SanatoriumQuircoTest.Services.Users
         }
 
         private string _apiUrl = String.Empty;
-        private string _registerEndpointUrl = "/register";
+        private string _registerEndpoint = "/register";
+        private string _loginEndpoint = "/login";
 
         private async Task<string> GetSessionFromServerAsync(string username, string password, bool refreshToken)
         {
             using (HttpClient client = new HttpClient())
             {
-                var targetUrl = _apiUrl + _registerEndpointUrl;
+                var targetUrl = _apiUrl + _registerEndpoint;
 
                 var requestParams = new
                 {
@@ -41,12 +42,52 @@ namespace SanatoriumQuircoTest.Services.Users
             }
         }
 
+        private async Task<string> LoginAsyncAndGetAccToken(string userId, string password)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var targetUrl = _apiUrl + _loginEndpoint;
+
+                var requestParams = new
+                {
+                    type = "m.login.password",
+                    password = password,
+                    identifier = new
+                    {
+                        type = "m.id.user",
+                        user = userId
+                    }
+                };
+
+                string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestParams);
+
+                StringContent content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.PostAsync(targetUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonResponse = await response.Content.ReadAsStringAsync();
+
+                    dynamic tokenResponse = JsonConvert.DeserializeObject(jsonResponse);
+
+                    string accessToken = tokenResponse.access_token;
+
+                    return accessToken;
+                }
+                else
+                {
+                    return $"{response.StatusCode} - {response.ReasonPhrase}";
+                }
+            }
+        }
+
         private async Task<(string access, string id)> FinalizeRegisterAsync(string username, string password, string sessionKey,
             bool refreshToken)
         {
             using (HttpClient client = new HttpClient())
             {
-                var targetUrl = _apiUrl + _registerEndpointUrl;
+                var targetUrl = _apiUrl + _registerEndpoint;
 
                 var requestParams = new
                 {

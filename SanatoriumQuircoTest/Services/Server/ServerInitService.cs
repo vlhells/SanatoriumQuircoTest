@@ -68,8 +68,8 @@ namespace SanatoriumQuircoTest.Services
 
             foreach (var acc in guestsTokensAndIds)
             {
-                var guestId = $"@guest_{1}:matrix.quirco.com"; // TODO 1: instead of foreach above.
-                // TODO 2: Get acc token somehow (if use this way).
+                var guestId = $"@guest_{1}:matrix.quirco.com"; // TODO: instead of foreach above.
+                // And LoginAsyncAndGetAccToken to get accToken.
 
                 var roomId = await _roomsService.CreateRoomAsync(sanatoriumAccessToken);
 
