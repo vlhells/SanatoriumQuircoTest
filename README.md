@@ -9,8 +9,8 @@ configuration file. The addition of configuration files allows homeserver admins
 to sanity check the registration for suspicious regex strings.    
 https://spec.matrix.org/v1.9/application-service-api/    
 
-## Аватары пользователям через API:  
-В spec не нашёл.    
+## Задать аватары пользователям через API:  
+На v1.9 (29.12.23) в spec нет.  
     
 ## Остальное  
 Написал, тестирую.
