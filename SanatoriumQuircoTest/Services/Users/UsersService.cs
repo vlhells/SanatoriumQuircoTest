@@ -1,72 +1,94 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using Newtonsoft.Json;
+using System.Net;
+using System.Text;
 
 namespace SanatoriumQuircoTest.Services.Users
 {
-    internal class UsersService: IUsersService
+    internal class UsersService : IUsersService
     {
-		private string _baseUrl;
+        public UsersService(string apiUrl)
+        {
+            _apiUrl = apiUrl;
+        }
 
-		public UsersService(string serverUrl)
-		{
-			_baseUrl = serverUrl;
-		}
+        private string _apiUrl = String.Empty;
+        private string _registerEndpointUrl = "/register";
 
-		public async Task CreateUserAsync(string username, string password)
-		{
-			using (HttpClient client = new HttpClient())
-			{
-				string baseUrl = _baseUrl;
-				string registerEndpoint = "/register";
+        private async Task<string> GetSessionFromServerAsync(string username, string password, bool refreshToken)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var targetUrl = _apiUrl + _registerEndpointUrl;
 
-				string url = $"{baseUrl}{registerEndpoint}";
+                var requestParams = new
+                {
+                    password = password,
+                    refresh_token = refreshToken,
+                    username = username
+                };
 
-				string jsonBody = $"{{\"username\": \"{username}\", \"password\": \"{password}\", \"auth\": {{\"type\": \"m.login.dummy\"}}}}";
+                string jsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(requestParams);
+                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-				HttpResponseMessage response = await client.PostAsync(url, new StringContent(jsonBody, Encoding.UTF8, "application/json"));
+                HttpResponseMessage response = await client.PostAsync(targetUrl, content);
 
-				if (response.IsSuccessStatusCode)
-				{
-					Console.WriteLine("Пользователь успешно создан!");
-				}
-				else
-				{
-					Console.WriteLine($"Ошибка: {response.StatusCode} - {response.ReasonPhrase}");
-				}
-			}
-		}
+                string responseBody = await response.Content.ReadAsStringAsync();
 
-		public async Task<string[]> GetPartOfUsernamesAsync(string adminToken, string prefix)
-		{
-			using (HttpClient client = new HttpClient())
-			{
-				string getUsersEndpoint = $"{_baseUrl}/_synapse/admin/v1/users";
-				string url = $"{_baseUrl}/_synapse/admin/v1/users";
+                dynamic json = Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody);
 
-				client.DefaultRequestHeaders.Add("Authorization", $"Bearer {adminToken}");
-				HttpResponseMessage response = await client.GetAsync(url);
+                string session = json.session;
 
-				if (response.IsSuccessStatusCode)
-				{
-					string responseBody = await response.Content.ReadAsStringAsync();
+                return session;
+            }
+        }
 
-					var usersResponse = JsonSerializer.Deserialize<UsersResponse>(responseBody);
+        private async Task<(string access, string id)> FinalizeRegisterAsync(string username, string password, string sessionKey,
+            bool refreshToken)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var targetUrl = _apiUrl + _registerEndpointUrl;
 
-					var guestUsernames = usersResponse?.Users?.Where(u => u.StartsWith($"{prefix}_")).ToArray();
+                var requestParams = new
+                {
+                    password = password,
+                    refresh_token = refreshToken,
+                    username = username,
+                    auth = new
+                    {
+                        type = "m.login.dummy",
+                        session = sessionKey
+                    }
+                };
 
-					return guestUsernames ?? Array.Empty<string>();
-				}
-				else
-				{
-					Console.WriteLine($"Ошибка при получении списка пользователей: {response.StatusCode} - {response.ReasonPhrase}");
-					return Array.Empty<string>();
-				}
-			}
-		}
-	}
+                string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestParams);
 
-	public class UsersResponse
-	{
-		public string[]? Users { get; set; }
-	}
+                StringContent content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.PostAsync(targetUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonResponse = await response.Content.ReadAsStringAsync();
+
+                    dynamic tokenResponse = JsonConvert.DeserializeObject(jsonResponse);
+
+                    string accessToken = tokenResponse.access_token;
+                    string userId = tokenResponse.user_id;
+
+                    return (accessToken, userId);
+                }
+                else
+                {
+                    return (response.StatusCode.ToString(), response.ReasonPhrase);
+                }
+            }
+        }
+
+        public async Task<(string accessToken, string id)> RegisterUserAccountAsync(string username, string password, bool refreshToken)
+        {
+            var session = await GetSessionFromServerAsync(username, password, refreshToken);
+            return await FinalizeRegisterAsync(username, password, session, refreshToken);
+        }
+    }
 }

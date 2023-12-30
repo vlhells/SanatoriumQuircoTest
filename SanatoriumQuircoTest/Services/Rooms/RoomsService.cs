@@ -1,120 +1,141 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using Newtonsoft.Json;
+using System.Text;
 
 namespace SanatoriumQuircoTest.Services.Rooms
 {
     internal class RoomsService: IRoomsService
     {
-		private string _baseUrl;
+        public RoomsService(string apiUrl)
+        {
+            _apiUrl = apiUrl;
+        }
 
-		public RoomsService(string serverUrl)
-		{
-			_baseUrl = serverUrl;
-		}
+        private string _apiUrl = String.Empty;
+        private string _createRoomEndpoint = "/createRoom";
+        private string _inviteUserEndpoint = "/rooms/{roomId}/invite";
+        private string _joinEndpoint = "/rooms/{roomId}/join";
+        private string _sendMessageEndpoint = "/rooms/{roomId}/send/m.room.message/{txnId}";
 
-		public async Task<string> CreateRoomAsync(string accessToken, string roomName)
-		{
-			using (HttpClient client = new HttpClient())
-			{
-				string baseUrl = _baseUrl;
-				string createRoomEndpoint = "/createRoom";
-				//string createRoomEndpoint = "/_matrix/client/v3/createRoom";
+        public async Task<string> CreateRoomAsync(string sanatoriumAccountToken)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var targetUrl = _apiUrl + _createRoomEndpoint;
+                string createRoomData = "{\"visibility\": \"private\", \"name\": \"Чат\"}";
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + sanatoriumAccountToken);
+                var content = new StringContent(createRoomData, Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(targetUrl, content);
 
-				string url = $"{baseUrl}{createRoomEndpoint}";
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonResponse = await response.Content.ReadAsStringAsync();
 
-				string jsonBody = $"{{\"name\": \"{roomName}\", \"visibility\": \"private\"}}";
+                    dynamic roomResponse = JsonConvert.DeserializeObject(jsonResponse);
 
-				client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
-				HttpResponseMessage response = await client.PostAsync(url, new StringContent(jsonBody, Encoding.UTF8, "application/json"));
+                    return roomResponse?.room_id; //
+                }
+                else
+                {
+                    Console.WriteLine($"Error: {response.StatusCode} - {response.ReasonPhrase}");
+                    return null;
+                }
+            }
+        }
 
-				if (response.IsSuccessStatusCode)
-				{
-					Console.WriteLine($"Комната '{roomName}' успешно создана!");
-					string responseBody = await response.Content.ReadAsStringAsync();
-					return responseBody; // id созданной комнаты.
-				}
-				else
-				{
-					Console.WriteLine($"Ошибка: {response.StatusCode} - {response.ReasonPhrase}");
-					return null;
-				}
-			}
-		}
+        public async Task<string> InviteUserIntoRoom(string accessToken, string roomId, string inviteeUserId)
+        {
+            var requestBody = new
+            {
+                user_id = inviteeUserId
+            };
 
-		public async Task AddUserToRoomAsync(string adminToken, string roomId, string userId)
-		{
-			using (HttpClient client = new HttpClient())
-			{
-				string baseUrl = _baseUrl;
-				string joinEndpoint = $"/rooms/{roomId}/join";
+            using (HttpClient client = new HttpClient())
+            {
+                var targetUrl = _apiUrl + _inviteUserEndpoint;
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
 
-				string url = $"{baseUrl}{joinEndpoint}";
+                string inviteUrl = targetUrl.Replace("{roomId}", roomId);
 
-				string jsonBody = $"{{\"user_id\": \"{userId}\"}}";
+                string requestBodyJson = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody);
+                var content = new StringContent(requestBodyJson, Encoding.UTF8, "application/json");
 
-				client.DefaultRequestHeaders.Add("Authorization", $"Bearer {adminToken}");
-				HttpResponseMessage response = await client.PostAsync(url, new StringContent(jsonBody, Encoding.UTF8, "application/json"));
+                var response = await client.PostAsync(inviteUrl, content);
 
-				if (response.IsSuccessStatusCode)
-				{
-					Console.WriteLine($"Пользователь '{userId}' успешно добавлен в комнату!");
-				}
-				else
-				{
-					Console.WriteLine($"Ошибка при добавлении пользователя '{userId}': {response.StatusCode} - {response.ReasonPhrase}");
-				}
-			}
-		}
+                if (response.IsSuccessStatusCode)
+                {
+                    return $"{inviteeUserId} invited successfully.";
+                }
+                else
+                {
+                    return $"Error: {response.StatusCode} - {response.ReasonPhrase}";
+                }
+            }
+        }
 
-		public async Task SendMessageToRoomAsync(string adminToken, string roomId, string message)
-		{
-			using (HttpClient client = new HttpClient())
-			{
-				string baseUrl = _baseUrl;
-				string sendMessageEndpoint = $"/rooms/{roomId}/send/m.room.message";
+        public async Task<string> JoinUserIntoRoom(string accessToken, string roomIdOrAlias, string serverName)
+        {
+            var requestParameters = new
+            {
+                roomIdOrAlias = roomIdOrAlias,
+                server_name = serverName
+            };
 
-				string url = $"{baseUrl}{sendMessageEndpoint}";
+            using (HttpClient client = new HttpClient())
+            {
+                var targetUrl = _apiUrl + _joinEndpoint;
 
-				string jsonBody = $"{{\"msgtype\": \"m.text\", \"body\": \"{message}\"}}";
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
 
-				client.DefaultRequestHeaders.Add("Authorization", $"Bearer {adminToken}");
-				HttpResponseMessage response = await client.PostAsync(url, new StringContent(jsonBody, Encoding.UTF8, "application/json"));
+                string joinUrl = targetUrl.Replace("{roomIdOrAlias}", roomIdOrAlias);
 
-				if (response.IsSuccessStatusCode)
-				{
-					Console.WriteLine($"Сообщение успешно отправлено в комнату!");
-				}
-				else
-				{
-					Console.WriteLine($"Ошибка при отправке сообщения: {response.StatusCode} - {response.ReasonPhrase}");
-				}
-			}
-		}
+                string queryString = $"server_name={serverName}";
+                joinUrl += $"?{queryString}";
 
-		public async Task<string[]> GetAllRoomsAsync(string adminToken)
-		{
-			using (HttpClient client = new HttpClient())
-			{
-				string allRoomsEndpoint = $"{_baseUrl}/_synapse/admin/v1/rooms";
-				string url = $"{_baseUrl}/_synapse/admin/v1/rooms";
+                var response = await client.GetAsync(joinUrl);
 
-				client.DefaultRequestHeaders.Add("Authorization", $"Bearer {adminToken}");
-				HttpResponseMessage response = await client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    return "Successfully joined the room.";
+                }
+                else
+                {
+                    return $"Error: {response.StatusCode} - {response.ReasonPhrase}";
+                }
+            }
+        }
 
-				if (response.IsSuccessStatusCode)
-				{
-					string responseBody = await response.Content.ReadAsStringAsync();
-					string[] roomIds = JsonSerializer.Deserialize<string[]>(responseBody);
+        public async Task<string> SendHelloFromSanatorium(string accessToken, string roomId, string messageText)
+        {
+            string transactionId = Guid.NewGuid().ToString();
 
-					return roomIds;
-				}
-				else
-				{
-					Console.WriteLine($"Ошибка при получении списка комнат: {response.StatusCode} - {response.ReasonPhrase}");
-					return Array.Empty<string>();
-				}
-			}
-		}
+            var targetUrl = _apiUrl + _sendMessageEndpoint;
 
-	}
+            string sendMessageUrl = targetUrl.Replace("{roomId}", roomId).Replace("{txnId}", transactionId);
+
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
+
+                var messageContent = new
+                {
+                    msgtype = "m.text",
+                    body = messageText
+                };
+
+                string messageContentJson = Newtonsoft.Json.JsonConvert.SerializeObject(messageContent);
+                var content = new StringContent(messageContentJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PutAsync(sendMessageUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return $"Message to {roomId} sent successfully.";
+                }
+                else
+                {
+                    return $"Error: {response.StatusCode} - {response.ReasonPhrase}";
+                }
+            }
+        }
+    }
 }

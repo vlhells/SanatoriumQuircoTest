@@ -1,4 +1,5 @@
-﻿using SanatoriumQuircoTest.Services;
+﻿using Microsoft.Extensions.Logging;
+using SanatoriumQuircoTest.Services;
 using SanatoriumQuircoTest.Services.Rooms;
 using SanatoriumQuircoTest.Services.Users;
 
@@ -6,21 +7,24 @@ namespace SanatoriumQuircoTest
 {
 	internal class Program
 	{
-		static void Main()
-		{
-			// TODO: CancellationTokens.
+		static async Task Main()
+        {
+            // TODO: Test work,
+            // XMLs in interfaces and models.
+            string apiUrl = "https://matrix.quirco.com/_matrix/client/v3";
 
-			string serverUrl = "https://matrix.quirco.com/";
-			IUsersService usersService = new UsersService(serverUrl);
-			IRoomsService roomsService = new RoomsService(serverUrl);
-			IServerInitService serverInitService = new ServerInitService(usersService, roomsService);
+            var usersService = new UsersService(apiUrl);
+            var roomsService = new RoomsService(apiUrl);
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
 
-			serverInitService.InitUsersAsync("Guest", 2000);
-			serverInitService.InitUsersAsync("emp", 50);
+            ILogger<ServerInitService> logger = loggerFactory.CreateLogger<ServerInitService>();
 
-			string adminToken; //
-			serverInitService.CreateRoomsWithGuestsAsync(adminToken);
-			serverInitService.AddEmployeesIntoRoomsAsync(adminToken, "Добро пожаловать в чат!");
-		}
+            var serverInitService = new ServerInitService(apiUrl, usersService, roomsService, logger);
+
+            await serverInitService.InitServer(2000, 50, false);
+        }
 	}
 }
