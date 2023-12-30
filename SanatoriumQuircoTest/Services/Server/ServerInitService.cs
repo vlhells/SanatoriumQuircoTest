@@ -39,7 +39,7 @@ namespace SanatoriumQuircoTest.Services
         {
             List<(string accToken, string id)> accTokensAndIds = new List<(string, string)>();
 
-            for (int i = 0; i <= numOfAccounts; i++)
+            for (int i = 200; i <= numOfAccounts; i++)
             {
                 var username = namePrefix + i;
                 var password = passPrefix + i;
@@ -68,6 +68,9 @@ namespace SanatoriumQuircoTest.Services
 
             foreach (var acc in guestsTokensAndIds)
             {
+                var guestId = $"@guest_{1}:matrix.quirco.com"; // TODO 1: instead of foreach above.
+                // TODO 2: Get acc token somehow (if use this way).
+
                 var roomId = await _roomsService.CreateRoomAsync(sanatoriumAccessToken);
 
                 var resultOfGuestInvite = await _roomsService.InviteUserIntoRoom(sanatoriumAccessToken, roomId, acc.id);
