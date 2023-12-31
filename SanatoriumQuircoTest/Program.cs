@@ -10,16 +10,14 @@ namespace SanatoriumQuircoTest
 	{
 		static async Task Main()
         {
-            // TODO: SendMessage, Test work,
-            // XMLs in interfaces and models.
-            string apiUrl = "https://matrix.quirco.com/_matrix/client/v3";
+            string apiUrl = "https://matrix.quirco.com/_matrix/client/v3"; // TODO: Нужно вынести в конфиг.
 
             var usersService = new UsersService(apiUrl);
             var roomsService = new RoomsService(apiUrl);
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.AddConsole();
-				builder.AddFile(Path.Combine(Directory.GetCurrentDirectory(), $"log_{DateTime.Now}.txt"));
+				builder.AddFile(Path.Combine(Directory.GetCurrentDirectory(), "log.txt"));
 			});
 
 			ILogger<ServerInitService> logger = loggerFactory.CreateLogger<ServerInitService>();

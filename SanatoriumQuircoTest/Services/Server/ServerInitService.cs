@@ -86,8 +86,8 @@ namespace SanatoriumQuircoTest.Services
 
                 var roomId = await _roomsService.CreateRoomAsync(sanatoriumAccessToken);
 
-                var resultOfGuestInvite = await _roomsService.InviteUserIntoRoom(sanatoriumAccessToken, roomId, guestId);
-                var resultOfGuestJoin = await _roomsService.JoinUserIntoRoom(guestAccToken, roomId);
+                var resultOfGuestInvite = await _roomsService.InviteUserIntoRoomAsync(sanatoriumAccessToken, roomId, guestId);
+                var resultOfGuestJoin = await _roomsService.JoinUserIntoRoomAsync(guestAccToken, roomId);
 
                 CheckResult(resultOfGuestInvite);
                 CheckResult(resultOfGuestJoin);
@@ -103,8 +103,8 @@ namespace SanatoriumQuircoTest.Services
 					var empId = $"@{_empLoginPrefix}{empNum}:matrix.quirco.com";
                     var empPassword = $"{_empPasswordPrefix}{empNum}";
                     var empAccToken = await _usersService.LoginAsyncAndGetAccToken(empId, empPassword);
-					var resultOfEmpInvite = await _roomsService.InviteUserIntoRoom(sanatoriumAccessToken, roomId, empId);
-                    var resultOfEmpJoin = await _roomsService.JoinUserIntoRoom(empAccToken, roomId);
+					var resultOfEmpInvite = await _roomsService.InviteUserIntoRoomAsync(sanatoriumAccessToken, roomId, empId);
+                    var resultOfEmpJoin = await _roomsService.JoinUserIntoRoomAsync(empAccToken, roomId);
 
                     prevEmpNum = empNum;
 
@@ -112,11 +112,13 @@ namespace SanatoriumQuircoTest.Services
                     CheckResult(resultOfEmpJoin);
                 }
 
-                var resultOfSend = await _roomsService.SendHelloFromSanatorium
+                var resultOfSend = await _roomsService.SendMessageAsync
                     (sanatoriumAccessToken, roomId, "Добро пожаловать!");
 
                 CheckResult(resultOfSend);
-            }
+
+				Thread.Sleep(4500);
+			}
         }
 
         private void CheckResult(string resultVariable)

@@ -42,7 +42,7 @@ namespace SanatoriumQuircoTest.Services.Rooms
             }
         }
 
-        public async Task<string> InviteUserIntoRoom(string accessToken, string roomId, string inviteeUserId)
+        public async Task<string> InviteUserIntoRoomAsync(string accessToken, string roomId, string inviteeUserId)
         {
             var requestBody = new
             {
@@ -72,7 +72,7 @@ namespace SanatoriumQuircoTest.Services.Rooms
             }
         }
 
-        public async Task<string> JoinUserIntoRoom(string accessToken, string roomIdOrAlias)
+        public async Task<string> JoinUserIntoRoomAsync(string accessToken, string roomIdOrAlias)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -97,8 +97,7 @@ namespace SanatoriumQuircoTest.Services.Rooms
             }
         }
 
-        // TODO:
-        public async Task<string> SendHelloFromSanatorium(string accessToken, string roomId, string messageText)
+        public async Task<string> SendMessageAsync(string accessToken, string roomId, string messageText)
         {
             string transactionId = Guid.NewGuid().ToString();
 
