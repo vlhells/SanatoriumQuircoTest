@@ -72,7 +72,7 @@ namespace SanatoriumQuircoTest.Services.Rooms
             }
         }
 
-        public async Task<string> JoinUserIntoRoom(string accessToken, string roomIdOrAlias, string serverName)
+        public async Task<string> JoinUserIntoRoom(string accessToken, string roomIdOrAlias)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -82,10 +82,9 @@ namespace SanatoriumQuircoTest.Services.Rooms
 
                 string joinUrl = targetUrl.Replace("{roomIdOrAlias}", roomIdOrAlias);
 
-                string queryString = $"server_name={serverName}";
-                joinUrl += $"?{queryString}";
+				var content = new StringContent(String.Empty, Encoding.UTF8, "application/json");
 
-                var response = await client.GetAsync(joinUrl);
+				var response = await client.PostAsync(joinUrl, content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -98,6 +97,7 @@ namespace SanatoriumQuircoTest.Services.Rooms
             }
         }
 
+        // TODO:
         public async Task<string> SendHelloFromSanatorium(string accessToken, string roomId, string messageText)
         {
             string transactionId = Guid.NewGuid().ToString();

@@ -42,7 +42,7 @@ namespace SanatoriumQuircoTest.Services.Users
             }
         }
 
-        private async Task<string> LoginAsyncAndGetAccToken(string userId, string password)
+        public async Task<string> LoginAsyncAndGetAccToken(string userId, string password)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -82,7 +82,7 @@ namespace SanatoriumQuircoTest.Services.Users
             }
         }
 
-        private async Task<(string access, string id)> FinalizeRegisterAsync(string username, string password, string sessionKey,
+        private async Task<string> FinalizeRegisterAsync(string username, string password, string sessionKey,
             bool refreshToken)
         {
             using (HttpClient client = new HttpClient())
@@ -116,16 +116,16 @@ namespace SanatoriumQuircoTest.Services.Users
                     string accessToken = tokenResponse.access_token;
                     string userId = tokenResponse.user_id;
 
-                    return (accessToken, userId);
+                    return userId;
                 }
                 else
                 {
-                    return (response.StatusCode.ToString(), response.ReasonPhrase);
+                    return $"{response.StatusCode} - {response.ReasonPhrase}";
                 }
             }
         }
 
-        public async Task<(string accessToken, string id)> RegisterUserAccountAsync(string username, string password, bool refreshToken)
+        public async Task<string> RegisterUserAccountAsync(string username, string password, bool refreshToken)
         {
             var session = await GetSessionFromServerAsync(username, password, refreshToken);
             return await FinalizeRegisterAsync(username, password, session, refreshToken);

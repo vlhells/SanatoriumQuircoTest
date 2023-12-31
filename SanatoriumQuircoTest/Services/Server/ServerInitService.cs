@@ -9,12 +9,19 @@ namespace SanatoriumQuircoTest.Services
         private IUsersService _usersService;
         private IRoomsService _roomsService;
         private ILogger _logger;
-        private string _apiUrl;
 
-        public ServerInitService(string apiUrl, IUsersService usersService, IRoomsService roomsService, 
-            ILogger logger)
+		// TODO: Нужно вынести в конфиги:
+		private string _sanatoriumAccountLogin = "Sanatorium";
+        private string _sanatoriumAccountPassword = "Quirco";
+        //.
+
+        private string _guestLoginPrefix = "Guest_";
+        private string _empLoginPrefix = "emp_";
+        private string _guestPasswordPrefix = "gpass_";
+        private string _empPasswordPrefix = "epass_";
+
+        public ServerInitService(IUsersService usersService, IRoomsService roomsService, ILogger logger)
         {
-            _apiUrl = apiUrl;
             _usersService = usersService;
             _roomsService = roomsService;
             _logger = logger;
@@ -22,73 +29,82 @@ namespace SanatoriumQuircoTest.Services
 
         public async Task InitServer(int numOfGuests, int numOfEmployees, bool refreshToken)
         {
-            var guestsTokensAndIds = await CreateAccountsAsync(numOfGuests, "Guest_", "gpass_", refreshToken);
-            var empsTokensAndIds = await CreateAccountsAsync(numOfEmployees, "emp_", "epass_", refreshToken);
+            await CreateAccountsAsync(numOfGuests, _guestLoginPrefix, _guestPasswordPrefix, refreshToken);
+            await CreateAccountsAsync(numOfEmployees, _empLoginPrefix, _empPasswordPrefix, refreshToken);
 
-            var sanatoriumTokenAndId = await _usersService.RegisterUserAccountAsync
-                ("Sanatorium", "Quirco", refreshToken); // TODO: Нужно вынести в конфиги.
-            var sanatoriumAccessToken = sanatoriumTokenAndId.accessToken;
+			var sanatoriumId = await _usersService.RegisterUserAccountAsync(_sanatoriumAccountLogin, 
+                _sanatoriumAccountPassword, refreshToken);
+			if (sanatoriumId.Contains(_sanatoriumAccountLogin.ToLower())) // Check that it is not status-code.
+			{
+				_logger.LogInformation($"Successfully registered {sanatoriumId}");
+			}
+			else // log status code and reason (in id variable).
+			{
+				_logger.LogCritical($"{sanatoriumId}");
+			}
 
-            await InitRoomsWithAccountsAsync(guestsTokensAndIds, empsTokensAndIds, sanatoriumAccessToken);
+            await InitRoomsWithAccountsAsync(numOfGuests, numOfEmployees);
 
             _logger.LogInformation("Successfully inited server.");
         }
 
-        private async Task<List<(string accToken, string id)>> CreateAccountsAsync(int numOfAccounts, string namePrefix, 
+        private async Task CreateAccountsAsync(int numOfAccounts, string namePrefix, 
             string passPrefix, bool refreshToken)
         {
-            List<(string accToken, string id)> accTokensAndIds = new List<(string, string)>();
-
-            for (int i = 200; i <= numOfAccounts; i++)
+            for (int i = 0; i <= numOfAccounts; i++)
             {
                 var username = namePrefix + i;
                 var password = passPrefix + i;
-                var tokenAndId = await _usersService.RegisterUserAccountAsync(username, password, refreshToken);
+                var id = await _usersService.RegisterUserAccountAsync(username, password, refreshToken);
 
-                if (tokenAndId.id.Contains("guest_") || tokenAndId.id.Contains("emp_")) // Check that it is not status-code.
+                if (id.Contains(_guestLoginPrefix.ToLower()) || id.Contains(_empLoginPrefix)) // Check that it is not status-code.
                 {
-                    accTokensAndIds.Add(tokenAndId);
-                    _logger.LogInformation($"Successfully registered {tokenAndId.id}");
+                    _logger.LogInformation($"Successfully registered {id}");
                 }
-                else
+                else // log status code and reason (in id variable).
                 {
-                    _logger.LogCritical($"{tokenAndId.accessToken} - {tokenAndId.id}; i: {i}");
+                    _logger.LogCritical($"{id}; i: {i}");
                 }
 
                 Thread.Sleep(4500); // Эмпирически установленный delay.
             }
-
-            return accTokensAndIds;
         }
 
-        private async Task InitRoomsWithAccountsAsync(List<(string accToken, string id)> guestsTokensAndIds,
-            List<(string accToken, string id)> empsTokensAndIds, string sanatoriumAccessToken)
+        private async Task InitRoomsWithAccountsAsync(int numOfGuests, int numOfEmps)
         {
             Random r = new Random();
 
-            foreach (var acc in guestsTokensAndIds)
+            var sanatoriumAccessToken = await _usersService.LoginAsyncAndGetAccToken
+                ($"@{_sanatoriumAccountLogin}:matrix.quirco.com", _sanatoriumAccountPassword);
+
+            for (int i = 0; i < numOfGuests; i++)
             {
-                var guestId = $"@guest_{1}:matrix.quirco.com"; // TODO: instead of foreach above.
-                // And LoginAsyncAndGetAccToken to get accToken.
+                var guestId = $"@{_guestLoginPrefix.ToLower()}{i}:matrix.quirco.com";
+                var guestPassword = $"{_guestPasswordPrefix}{i}";
+
+                var guestAccToken = await _usersService.LoginAsyncAndGetAccToken(guestId, guestPassword);
 
                 var roomId = await _roomsService.CreateRoomAsync(sanatoriumAccessToken);
 
-                var resultOfGuestInvite = await _roomsService.InviteUserIntoRoom(sanatoriumAccessToken, roomId, acc.id);
-                var resultOfGuestJoin = await _roomsService.JoinUserIntoRoom(acc.accToken, roomId, _apiUrl);
+                var resultOfGuestInvite = await _roomsService.InviteUserIntoRoom(sanatoriumAccessToken, roomId, guestId);
+                var resultOfGuestJoin = await _roomsService.JoinUserIntoRoom(guestAccToken, roomId);
 
                 CheckResult(resultOfGuestInvite);
                 CheckResult(resultOfGuestJoin);
 
-                for (int i = 0; i < 2; i++)
+                for (int j = 0; j < 2; j++)
                 {
-                    int empNum;
+					int empNum;
                     int prevEmpNum = -1; // For init this variable.
                     do
                     {
-                        empNum = r.Next(0, empsTokensAndIds.Count() - 1);
+                        empNum = r.Next(0, numOfEmps);
                     } while (empNum == prevEmpNum);
-                    var resultOfEmpInvite = await _roomsService.InviteUserIntoRoom(sanatoriumAccessToken, roomId, empsTokensAndIds[empNum].id);
-                    var resultOfEmpJoin = await _roomsService.JoinUserIntoRoom(empsTokensAndIds[empNum].accToken, roomId, _apiUrl);
+					var empId = $"@{_empLoginPrefix}{empNum}:matrix.quirco.com";
+                    var empPassword = $"{_empPasswordPrefix}{empNum}";
+                    var empAccToken = await _usersService.LoginAsyncAndGetAccToken(empId, empPassword);
+					var resultOfEmpInvite = await _roomsService.InviteUserIntoRoom(sanatoriumAccessToken, roomId, empId);
+                    var resultOfEmpJoin = await _roomsService.JoinUserIntoRoom(empAccToken, roomId);
 
                     prevEmpNum = empNum;
 

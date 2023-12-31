@@ -2,6 +2,7 @@
 using SanatoriumQuircoTest.Services;
 using SanatoriumQuircoTest.Services.Rooms;
 using SanatoriumQuircoTest.Services.Users;
+using SanatoriumQuircoTest.TxtLogger;
 
 namespace SanatoriumQuircoTest
 {
@@ -9,7 +10,7 @@ namespace SanatoriumQuircoTest
 	{
 		static async Task Main()
         {
-            // TODO: Test work,
+            // TODO: SendMessage, Test work,
             // XMLs in interfaces and models.
             string apiUrl = "https://matrix.quirco.com/_matrix/client/v3";
 
@@ -18,11 +19,12 @@ namespace SanatoriumQuircoTest
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.AddConsole();
-            });
+				builder.AddFile(Path.Combine(Directory.GetCurrentDirectory(), $"log_{DateTime.Now}.txt"));
+			});
 
-            ILogger<ServerInitService> logger = loggerFactory.CreateLogger<ServerInitService>();
+			ILogger<ServerInitService> logger = loggerFactory.CreateLogger<ServerInitService>();
 
-            var serverInitService = new ServerInitService(apiUrl, usersService, roomsService, logger);
+            var serverInitService = new ServerInitService(usersService, roomsService, logger);
 
             await serverInitService.InitServer(2000, 50, false);
         }

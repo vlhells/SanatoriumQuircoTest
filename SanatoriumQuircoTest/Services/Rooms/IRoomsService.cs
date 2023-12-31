@@ -10,7 +10,7 @@ namespace SanatoriumQuircoTest.Services.Rooms
 
         public Task<string> InviteUserIntoRoom(string accessToken, string roomId, string inviteeUserId);
 
-        public Task<string> JoinUserIntoRoom(string accessToken, string roomIdOrAlias, string serverName);
+        public Task<string> JoinUserIntoRoom(string accessToken, string roomIdOrAlias);
 
         public Task<string> SendHelloFromSanatorium(string accessToken, string roomId, string messageText);
     }
