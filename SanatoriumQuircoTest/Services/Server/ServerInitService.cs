@@ -65,14 +65,13 @@ namespace SanatoriumQuircoTest.Services
                 if (id.Contains(_guestLoginPrefix.ToLower()) || id.Contains(_empLoginPrefix)) // Check that it is not status-code.
                 {
                     _logger.LogInformation($"Successfully registered {id}");
+                    var setAvatarResult = await _usersService.SetAvatarAsync(id, accessToken, generalAvatarUrl);
+                    CheckResult(setAvatarResult);
                 }
                 else // log status code and reason (in id variable).
                 {
                     _logger.LogCritical($"{id}; i: {i}");
                 }
-
-                var setAvatarResult = await _usersService.SetAvatarAsync(id, accessToken, generalAvatarUrl);
-                CheckResult(setAvatarResult);
 
                 Thread.Sleep(4500); // Эмпирически установленный delay.
             }

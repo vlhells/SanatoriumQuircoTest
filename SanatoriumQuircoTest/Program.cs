@@ -18,7 +18,7 @@ namespace SanatoriumQuircoTest
             {
                 builder.AddConsole();
 				builder.AddFile(Path.Combine(Directory.GetCurrentDirectory(), 
-                    $"log__{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Hour}_" +
+                    $"log__{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Year}-{DateTime.Now.Hour}_" +
                     $"{DateTime.Now.Minute}_{DateTime.Now.Second}.txt"));
 			});
 
