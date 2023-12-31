@@ -45,13 +45,13 @@ namespace SanatoriumQuircoTest.Services
 
             await InitRoomsWithAccountsAsync(numOfGuests, numOfEmployees);
 
-            _logger.LogInformation("Successfully inited server.");
+            _logger.LogInformation("The end.");
         }
 
         private async Task CreateAccountsAsync(int numOfAccounts, string namePrefix, 
             string passPrefix, bool refreshToken)
         {
-            for (int i = 0; i <= numOfAccounts; i++)
+            for (int i = 0; i < numOfAccounts; i++)
             {
                 var username = namePrefix + i;
                 var password = passPrefix + i;

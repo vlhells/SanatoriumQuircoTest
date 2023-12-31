@@ -16,13 +16,13 @@ namespace SanatoriumQuircoTest.Services.Rooms
         private string _joinEndpoint = "/rooms/{roomId}/join";
         private string _sendMessageEndpoint = "/rooms/{roomId}/send/m.room.message/{txnId}";
 
-        public async Task<string> CreateRoomAsync(string sanatoriumAccountToken)
+        public async Task<string> CreateRoomAsync(string accessToken)
         {
             using (HttpClient client = new HttpClient())
             {
                 var targetUrl = _apiUrl + _createRoomEndpoint;
                 string createRoomData = "{\"visibility\": \"private\", \"name\": \"Чат\"}";
-                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + sanatoriumAccountToken);
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
                 var content = new StringContent(createRoomData, Encoding.UTF8, "application/json");
                 var response = await client.PostAsync(targetUrl, content);
 
