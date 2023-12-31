@@ -27,13 +27,16 @@ namespace SanatoriumQuircoTest.Services
             _logger = logger;
         }
 
-        public async Task InitServer(int numOfGuests, int numOfEmployees, bool refreshToken)
+        public async Task InitServer(int numOfGuests, int numOfEmployees, bool refreshToken, 
+            string generalUserAvatarUrl)
         {
-            await CreateAccountsAsync(numOfGuests, _guestLoginPrefix, _guestPasswordPrefix, refreshToken);
-            await CreateAccountsAsync(numOfEmployees, _empLoginPrefix, _empPasswordPrefix, refreshToken);
+            await CreateAccountsAsync(numOfGuests, _guestLoginPrefix, _guestPasswordPrefix, refreshToken, 
+                generalUserAvatarUrl);
+            await CreateAccountsAsync(numOfEmployees, _empLoginPrefix, _empPasswordPrefix, refreshToken, 
+                generalUserAvatarUrl);
 
-			var sanatoriumId = await _usersService.RegisterUserAccountAsync(_sanatoriumAccountLogin, 
-                _sanatoriumAccountPassword, refreshToken);
+			var sanatoriumId = (await _usersService.RegisterUserAccountAsync(_sanatoriumAccountLogin, 
+                _sanatoriumAccountPassword, refreshToken)).userId;
 			if (sanatoriumId.Contains(_sanatoriumAccountLogin.ToLower())) // Check that it is not status-code.
 			{
 				_logger.LogInformation($"Successfully registered {sanatoriumId}");
@@ -49,13 +52,15 @@ namespace SanatoriumQuircoTest.Services
         }
 
         private async Task CreateAccountsAsync(int numOfAccounts, string namePrefix, 
-            string passPrefix, bool refreshToken)
+            string passPrefix, bool refreshToken, string generalAvatarUrl)
         {
             for (int i = 0; i < numOfAccounts; i++)
             {
                 var username = namePrefix + i;
                 var password = passPrefix + i;
-                var id = await _usersService.RegisterUserAccountAsync(username, password, refreshToken);
+                var idAndToken = await _usersService.RegisterUserAccountAsync(username, password, refreshToken);
+                var id = idAndToken.userId;
+                var accessToken = idAndToken.accToken;
 
                 if (id.Contains(_guestLoginPrefix.ToLower()) || id.Contains(_empLoginPrefix)) // Check that it is not status-code.
                 {
@@ -65,6 +70,9 @@ namespace SanatoriumQuircoTest.Services
                 {
                     _logger.LogCritical($"{id}; i: {i}");
                 }
+
+                var setAvatarResult = await _usersService.SetAvatarAsync(id, accessToken, generalAvatarUrl);
+                CheckResult(setAvatarResult);
 
                 Thread.Sleep(4500); // Эмпирически установленный delay.
             }

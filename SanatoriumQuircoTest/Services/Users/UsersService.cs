@@ -13,6 +13,7 @@ namespace SanatoriumQuircoTest.Services.Users
         private string _apiUrl = String.Empty;
         private string _registerEndpoint = "/register";
         private string _loginEndpoint = "/login";
+        private string _setAvatarEndpoint = "/profile/{userId}/avatar_url";
 
         private async Task<string> GetSessionFromServerAsync(string username, string password, bool refreshToken)
         {
@@ -82,7 +83,8 @@ namespace SanatoriumQuircoTest.Services.Users
             }
         }
 
-        private async Task<string> FinalizeRegisterAsync(string username, string password, string sessionKey,
+        private async Task<(string userId, string accToken)> FinalizeRegisterAsync(string username, 
+            string password, string sessionKey,
             bool refreshToken)
         {
             using (HttpClient client = new HttpClient())
@@ -113,22 +115,53 @@ namespace SanatoriumQuircoTest.Services.Users
 
                     dynamic tokenResponse = JsonConvert.DeserializeObject(jsonResponse);
 
-                    string accessToken = tokenResponse.access_token;
                     string userId = tokenResponse.user_id;
+                    string accessToken = tokenResponse.access_token;
 
-                    return userId;
+                    return (userId, accessToken);
                 }
                 else
                 {
-                    return $"{response.StatusCode} - {response.ReasonPhrase}";
+                    return (response.StatusCode.ToString(), response.ReasonPhrase);
                 }
             }
         }
 
-        public async Task<string> RegisterUserAccountAsync(string username, string password, bool refreshToken)
+        public async Task<(string userId, string accToken)> RegisterUserAccountAsync(string username, string password, bool refreshToken)
         {
             var session = await GetSessionFromServerAsync(username, password, refreshToken);
             return await FinalizeRegisterAsync(username, password, session, refreshToken);
+        }
+
+        public async Task<string> SetAvatarAsync(string userId, string accessToken, string avatarUrl)
+        {
+            var requestBody = new
+            {
+                avatar_url = avatarUrl
+            };
+
+            using (HttpClient client = new HttpClient())
+            {
+                var targetUrl = _apiUrl + _setAvatarEndpoint;
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
+
+                string setAvatarUrl = targetUrl.Replace("{userId}", userId);
+
+                string requestBodyJson = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody);
+
+                var content = new StringContent(requestBodyJson, Encoding.UTF8, "application/json");
+
+                var response = await client.PutAsync(setAvatarUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return $"{userId} avatar set successfully.";
+                }
+                else
+                {
+                    return $"Error: {response.StatusCode} - {response.ReasonPhrase}";
+                }
+            }
         }
     }
 }

@@ -17,14 +17,16 @@ namespace SanatoriumQuircoTest
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.AddConsole();
-				builder.AddFile(Path.Combine(Directory.GetCurrentDirectory(), "log.txt"));
+				builder.AddFile(Path.Combine(Directory.GetCurrentDirectory(), 
+                    $"log__{DateTime.Now.Day}_{DateTime.Now.Month}_{DateTime.Now.Hour}_" +
+                    $"{DateTime.Now.Minute}_{DateTime.Now.Second}.txt"));
 			});
 
 			ILogger<ServerInitService> logger = loggerFactory.CreateLogger<ServerInitService>();
 
             var serverInitService = new ServerInitService(usersService, roomsService, logger);
 
-            await serverInitService.InitServer(2000, 50, false);
+            await serverInitService.InitServer(2000, 50, false, String.Empty); // Указать ссылку на картинку.
         }
 	}
 }
